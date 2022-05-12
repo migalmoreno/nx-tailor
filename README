@@ -1,0 +1,192 @@
+# -*- mode: org; -*-
+#+title: nx-tailor
+=nx-tailor= is a tailor for all-things [[https://nyxt.atlas.engineer/][Nyxt]] themes which helps you manage them, change them on-the-fly, and discover new ones in a unified interface. It provides high customizability over the smallest bits on Nyxt's interface, for those that enjoy their browser to match their style.
+
+* Installation
+To install the extension, you should download the source and place it in Nyxt's extensions path, given by the value of =(nyxt-source-registry)= (by default =~/.local/share/nyxt/extensions=).
+
+#+begin_src sh
+git clone https://github.com/efimerspan/nx-tailor ~/.local/share/nyxt/nx-tailor
+#+end_src
+
+The extension works with *Nyxt 3 onward*, so ensure to use it with the latest version of Nyxt master for the time being.
+
+If you want to place the extension elsewhere in the system, such as for development purposes, you can configure so via the ASDF source registry mechanism. For this, you'll need to create a file in the source registry directory, =~/.config/common-lisp/source-registry.conf.d/=, and then put the following contents into it, replacing the path with the desired system path.
+
+#+name: 10-personal-lisp.conf
+#+begin_src lisp
+(:tree "/path/to/user/location")
+#+end_src
+
+Then, make sure to refresh the ASDF cache via =asdf:clear-source-registry=. ASDF will now be able to find the extension on the custom path. For more information on this utility, please refer to the [[https://asdf.common-lisp.dev/asdf.html][ASDF manual]].
+
+However, by default Nyxt won't read the custom source registry path we provided, so ensure to include a =reset-asdf-registries= invocation in the Nyxt's initialization file too.
+
+In your Nyxt initialization file, place the following.
+
+#+begin_src lisp
+(load-after-system :nx-tailor (nyxt-init-file "/path/to/tailor.lisp"))
+
+(define-configuration buffer
+  ((default-modes `(tailor:tailor-mode ,@%slot-default%))))
+#+end_src
+
+Where =/path/to/tailor.lisp= is a custom file that should be created to provide the extension settings after the =nx-tailor= system has been successfully loaded. Inside this file, you should provide the extension options, explained in the following section.
+
+* Configuration
+=nx-tailor='s configuration is very simple and it involves passing in a list of themes to apply to the browser.
+
+#+begin_src lisp
+(import 'nx-tailor:make-theme)
+
+(define-configuration tailor:tailor-mode
+  ((tailor:auto-p t) ; Set theme based on GTK_THEME
+   (tailor:themes
+    (list
+     (make-theme "Modus Operandi"
+                 :background-color "white"
+                 :text-color "black"
+                 :primary-color "#093060"
+                 :secondary-color "#f0f0f0"
+                 :tertiary-color "#dfdfdf"
+                 :quaternary-color "#005a5f"
+                 :accent-color "#8f0075"
+                 :font-family "Iosevka"
+                 :cut (make-instance 'tailor:cut))
+     (make-theme "Modus Vivendi"
+                 :dark-p t
+                 :background-color "black"
+                 :text-color "white"
+                 :primary-color "#c6eaff"
+                 :secondary-color "#323232"
+                 :tertiary-color "#323232"
+                 :quaternary-color "#a8a8a8"
+                 :accent-color "#afafef"
+                 :font-family "Iosevka"
+                 :cut (make-instance 'tailor:cut))))))
+#+end_src
+
+Above, we define some themes with a name and a set of theme attributes from the built-in =nyxt/theme= library. Optionally, each internal theme can take a =cut=, a list of CSS rules for various UI elements to give the browser a more custom look and allowing dynamic theme change without having to restart the browser, useful if you're the kind of person who switches between light and dark themes depending on the time of the day. A =cut= effectively aims at simplifying themeing, which is normally achieved by having to look through the =style= slot of multiple classes.
+
+#+begin_src lisp
+(define-configuration tailor:cut
+  ((tailor:name "Minimal")
+   (tailor:prompt
+    '((* :font-family theme:font-family)
+      ("#prompt-modes"
+       :display "none")
+      ("#prompt-area"
+       :background-color theme:tertiary
+       :color theme:quaternary
+       :border "1px solid"
+       :border-color (if (theme:dark-p theme:theme) theme:quaternary theme:text))
+      ("#input"
+       :background-color theme:tertiary
+       :color theme:text)
+      (".source-content"
+       :border "none"
+       :border-collapse collapse)
+      (".source-name"
+       :background-color theme:background
+       :color theme:text
+       :font-style "italic")
+      (".source-content th"
+       :padding-left "0"
+       :background-color theme:background
+       :font-weight "bold")
+      (".source-content td"
+       :padding "0 2px")
+      ("#selection"
+       :font-weight "bold"
+       :background-color theme:secondary
+       :color theme:text)))
+   (tailor:user-buffer
+    '((body
+       :font-family theme:font-family
+       :background-color theme:background
+       :color theme:text)
+      ("h1,h2,h3,h4,h5,h6"
+       :font-family "IBM Plex Sans"
+       :color theme:primary)
+      ("p,pre,td"
+       :font-family "IBM Plex Sans"
+       :color theme:text)
+      (pre
+       :background-color theme:tertiary)
+      ("button,a:link"
+       :color theme:text
+       :font-family "IBM Plex Sans")
+      (".button, .button:hover , .button:visited, .button:active"
+       :background-color theme:secondary
+       :border "1px solid"
+       :border-color (if (theme:dark-p theme:theme) theme:quaternary theme:text)
+       :color theme:text)
+      (code
+       :font-family "Iosevka"
+       :background-color theme:tertiary)))
+   (tailor:status
+    '((body
+       :font-family theme:font-family
+       :height "100%"
+       :width "100%"
+       :border "1px solid"
+       :border-color (if (theme:dark-p theme:theme) theme:quaternary theme:text)
+       :box-sizing "border-box"
+       :line-height "20px"
+       :display "flex"
+       :flex-direction "column"
+       :background theme:tertiary
+       :flex-wrap "wrap")
+      ("#container"
+       :display "flex"
+       :height "100%"
+       :width "100%"
+       :line-height "20px"
+       :justify-content "space-between"
+       :align-items "center")
+      ("#buttons"
+       :display "flex"
+       :align-items "center"
+       :justify-content "center"
+       :line-height "20px"
+       :height "100%")
+      ("#url"
+       :font-weight "bold"
+       :max-width "60%"
+       :padding-right "0"
+       :padding-left "5px"
+       :background-color theme:tertiary
+       :color theme:text
+       :box-sizing "border-box"
+       :z-index "auto")
+      ("#tabs, #controls" :display "none")
+      ("#modes"
+       :padding-right "2px"
+       :background-color theme:tertiary
+       :box-sizing "border-box"
+       :color theme:text
+       :display "flex"
+       :justify-contents "flex-end"
+       :z-index "auto")
+      (.button
+       :color theme:text)))
+   (tailor:message
+    '((body
+       :color theme:text
+       :background-color theme:background
+       :font-family theme:font-family)))
+   (tailor:hint
+    '((".nyxt-hint"
+       :background-color theme:primary
+       :color theme:background
+       :font-weight "bold"
+       :padding "0px 3px"
+       :border-radius "2px"
+       :z-index #.(1- (expt 2 31)))))))
+#+end_src
+
+The above is an example =cut= which I use in my configuration to achieve a more compact look to Nyxt. However, you're free to modify or not each slot to your heart's content. You can pass different =cut='s to different themes, allowing you to change both the color palette and the layout of Nyxt per theme.
+
+[[file:assets/cut-operandi.png]]
+
+[[file:assets/cut-vivendi.png]]
