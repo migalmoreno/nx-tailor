@@ -79,14 +79,14 @@ looks through all the children class slots."
                               *current-theme*
                               :element 'nyxt:buffer
                               :accessor #'user-buffer))
-  (when (find-submode (resolve-symbol :web-mode :mode) buffer)
-    (setf (nyxt/web-mode:box-style (find-submode (resolve-symbol :web-mode :mode) buffer))
+  (when (find-submode (resolve-symbol :hint-mode :mode) buffer)
+    (setf (nyxt/hint-mode:box-style (find-submode (resolve-symbol :hint-mode :mode) buffer))
           (compute-style *current-theme*
-                         :element 'nyxt/web-mode:web-mode
-                         :style-slot 'nyxt/web-mode:box-style
+                         :element 'nyxt/hint-mode:hint-mode
+                         :style-slot 'nyxt/hint-mode:box-style
                          :accessor #'hint))))
 
-(define-mode tailor-mode (nyxt/style-mode:style-mode)
+(define-mode tailor-mode ()
   "Mode that manages custom browser themes."
   ((themes
     '()
@@ -207,12 +207,12 @@ looks through all the children class slots."
 
 (defun reload-hint-style (mode)
   "Reloads hint styles in MODE."
-  (when (find-submode (resolve-symbol :web-mode :mode) (buffer mode))
-    (setf (nyxt/web-mode:box-style
-           (find-submode (resolve-symbol :web-mode :mode) (buffer mode)))
+  (when (find-submode (resolve-symbol :hint-mode :mode) (buffer mode))
+    (setf (nyxt/hint-mode:box-style
+           (find-submode (resolve-symbol :hint-mode :mode) (buffer mode)))
           (compute-style *current-theme*
-                         :element 'nyxt/web-mode:web-mode
-                         :style-slot 'nyxt/web-mode:box-style
+                         :element 'nyxt/hint-mode:hint-mode
+                         :style-slot 'nyxt/hint-mode:box-style
                          :accessor #'hint))))
 
 (defun reload-buffer-style ()
@@ -244,6 +244,6 @@ looks through all the children class slots."
   "Applies the `current-theme''s color scheme to the current page."
   (when *current-theme*
     (nyxt::html-set-style
-     (funcall (user-buffer (cut (current-theme (current-tailor-mode))))
+     (funcall (user-buffer (cut *current-theme*))
               *current-theme*)
      (current-buffer))))
