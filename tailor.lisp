@@ -2,13 +2,18 @@
 (nyxt:use-nyxt-package-nicknames)
 
 (defparameter *current-theme* nil
-  "Current `internal-theme'.")
+  "Current `user-theme'.")
 
 (sera:export-always 'make-theme)
 (defun make-theme (name &rest extra-slots &key &allow-other-keys)
   "Builds a `nx-tailor' theme. NAME is required and EXTRA-SLOTS
 can vary depending on the theme complexity."
-  (apply #'make-instance 'internal-theme :name name extra-slots))
+  (apply #'make-instance 'user-theme :name name extra-slots))
+
+(sera:export-always 'make-important)
+(defun make-important (value)
+  "Outputs a CSS `!important' rule for VALUE."
+  (format nil "~a !important" value))
 
 (defun list-of-lists-p (object)
   "Returns non-nil of OBJECT consists of a list of lists."
@@ -41,7 +46,7 @@ can vary depending on the theme complexity."
   (:documentation "A cut is a theme's custom finishing which styles various bits of Nyxt's interface.")
   (:metaclass user-class))
 
-(define-class internal-theme (theme:theme)
+(define-class user-theme (theme:theme)
   ((name
     ""
     :type string
@@ -73,8 +78,8 @@ looks through all the children class slots."
          :key (lambda (el)
                 (slot-value el 'sb-pcl::name)))))
 
-(defun theme-handler (buffer mode)
-  "Handler function to re-calculate styles in BUFFER with MODE."
+(defun theme-handler (buffer)
+  "Handler function to re-calculate styles in BUFFER."
   (setf (nyxt::style buffer) (compute-style
                               *current-theme*
                               :element 'nyxt:buffer
@@ -91,7 +96,7 @@ looks through all the children class slots."
   ((themes
     '()
     :type list
-    :documentation "`internal-theme' objects among which to select the main internal interface theme.")
+    :documentation "`user-theme' objects among which to select the main interface theme.")
    (auto-p
     nil
     :type boolean
@@ -103,7 +108,7 @@ looks through all the children class slots."
                 (find (theme *browser*) (themes mode) :test #'equal)
                 *current-theme*)
       (or (and auto-p
-               (if (string= (uiop:getenv "GTK_THEME") ":light")
+               (if (str:containsp ":light" (uiop:getenv "GTK_THEME"))
                    (select-theme (name (find-theme-variant mode)) mode)
                    (setf (nyxt::style (buffer mode))
                          (compute-style
@@ -113,12 +118,7 @@ looks through all the children class slots."
                           :element 'nyxt:buffer
                           :accessor #'user-buffer))))
           (select-theme (name (car (themes mode))) mode))
-      (hooks:add-hook (nyxt:buffer-before-make-hook *browser*)
-                      (make-instance
-                       'hooks:handler
-                       :fn (lambda (buffer)
-                             (theme-handler buffer mode))
-                       :name 'handle-theme)))))
+      (hooks:add-hook (nyxt:buffer-before-make-hook *browser*) #'theme-handler))))
 
 (defmethod nyxt:disable ((mode tailor-mode) &key)
   (hooks:remove-hook (nyxt:buffer-before-make-hook *browser*) #'theme-handler)
@@ -131,6 +131,11 @@ looks through all the children class slots."
       (find-if #'theme:dark-p (themes mode))
       (find-if-not #'theme:dark-p (themes mode))))
 
+(defun current-tailor-mode ()
+  "Returns `tailor-mode' if it's active in the current buffer."
+  (find-submode
+   (resolve-symbol :tailor-mode :mode '(:nx-tailor))))
+
 (defun compute-style (theme &key element accessor (style-slot nil))
   (str:concat
    (eval (get-original-style element (or style-slot)))
@@ -139,14 +144,8 @@ looks through all the children class slots."
                                         ,@(funcall accessor (cut theme)))))
                              theme))))
 
-(defun current-tailor-mode ()
-  "Returns `tailor-mode' if it's active in the current buffer."
-  (find-submode
-   (resolve-symbol :tailor-mode :mode '(:nx-tailor))))
-
-(defun reload-window-style ()
-  "Reloads the window style."
-  (if (not (current-window))
+(defmethod reload-style ((element nyxt:window))
+  (if (not element)
       (hooks:add-hook (nyxt:window-make-hook *browser*)
                       (make-instance
                        'hooks:handler
@@ -175,8 +174,7 @@ looks through all the children class slots."
   (nyxt::print-status)
   (nyxt::echo ""))
 
-(defun reload-prompt-style ()
-  "Reloads the prompt buffer style."
+(defmethod reload-style ((element nyxt:prompt-buffer))
   (if (not (cut *current-theme*))
       (progn
         (hooks:remove-hook (nyxt:prompt-buffer-make-hook *browser*)
@@ -205,18 +203,19 @@ looks through all the children class slots."
                                       :accessor #'prompt)))
                          :name 'style-prompt)))))
 
-(defun reload-hint-style (mode)
-  "Reloads hint styles in MODE."
-  (when (find-submode (resolve-symbol :hint-mode :mode) (buffer mode))
-    (setf (nyxt/hint-mode:box-style
-           (find-submode (resolve-symbol :hint-mode :mode) (buffer mode)))
-          (compute-style *current-theme*
-                         :element 'nyxt/hint-mode:hint-mode
-                         :style-slot 'nyxt/hint-mode:box-style
-                         :accessor #'hint))))
+(defmethod reload-style ((element nyxt/hint-mode:hint-mode))
+  (setf (nyxt/hint-mode:box-style element)
+        (compute-style *current-theme*
+                       :element 'nyxt/hint-mode:hint-mode
+                       :style-slot 'nyxt/hint-mode:box-style
+                       :accessor #'hint)
+        (nyxt/hint-mode:highlighted-box-style element)
+        (compute-style *current-theme*
+                       :element 'nyxt/hint-mode:hint-mode
+                       :style-slot 'nyxt/hint-mode:highlighted-box-style
+                       :accessor #'hint)))
 
-(defun reload-buffer-style ()
-  "Reloads user buffers styles"
+(defmethod reload-style ((element nyxt:buffer))
   (loop for buffer in (nyxt::buffer-initial-suggestions)
         do (progn
              (setf (nyxt::style buffer) (compute-style *current-theme*
@@ -225,7 +224,7 @@ looks through all the children class slots."
              (nyxt:buffer-load (nyxt:url buffer) :buffer buffer))))
 
 (define-command-global select-theme (&optional name (mode (current-tailor-mode)))
-  "Selects an `internal-theme' with NAME from MODE and applies it."
+  "Selects a `user-theme' with NAME from MODE and applies it."
   (let ((theme (or (and name
                         (find name (themes mode)
                               :key #'name :test #'string=))
@@ -234,14 +233,16 @@ looks through all the children class slots."
                      :sources (make-instance 'theme-source)))))
     (setf *current-theme* theme
           (theme *browser*) theme)
-    (reload-window-style)
-    (reload-prompt-style)
-    (reload-hint-style mode)
-    (reload-buffer-style)
+    (reload-style (current-window))
+    (reload-style (make-instance 'nyxt:prompt-buffer
+                                 :window (current-window)
+                                 :sources (make-instance 'prompter:raw-source)))
+    (reload-style (find-submode (resolve-symbol :hint-mode :mode) (buffer mode)))
+    (reload-style (current-buffer))
     theme))
 
 (define-command-global apply-current-theme ()
-  "Applies the `current-theme''s color scheme to the current page."
+  "Applies the `*current-theme*' color scheme to the current page."
   (when *current-theme*
     (nyxt::html-set-style
      (funcall (user-buffer (cut *current-theme*))
