@@ -3,10 +3,10 @@
 =nx-tailor= is a tailor for all-things [[https://nyxt.atlas.engineer/][Nyxt]] themes which helps you manage them, change them on-the-fly, and discover new ones in a unified interface. It provides high customizability over the smallest bits on Nyxt's interface, for those that enjoy their browser to match their style.
 
 * Installation
-To install the extension, you should download the source and place it in Nyxt's extensions path, given by the value of =(nyxt-source-registry)= (by default =~/.local/share/nyxt/extensions=).
+To install the extension, you should download the source and place it in Nyxt's extensions path, given by the value of =nyxt-source-registry= (by default =~/.local/share/nyxt/extensions=).
 
 #+begin_src sh
-git clone https://github.com/efimerspan/nx-tailor ~/.local/share/nyxt/extensions/nx-tailor
+git clone https://git.sr.ht/~conses/nx-tailor ~/.local/share/nyxt/extensions/nx-tailor
 #+end_src
 
 The extension works with *Nyxt 3 onward*, so ensure to use it with the latest version of Nyxt master for the time being.
@@ -25,7 +25,7 @@ However, by default Nyxt won't read the custom source registry path we provided,
 In your Nyxt initialization file, place the following.
 
 #+begin_src lisp
-(load-after-system :nx-tailor (nyxt-init-file "/path/to/tailor.lisp"))
+(load-after-system :nx-tailor (nyxt-config-file "/path/to/tailor.lisp"))
 
 (define-configuration buffer
   ((default-modes `(tailor:tailor-mode ,@%slot-default%))))
@@ -59,7 +59,7 @@ Where =/path/to/tailor.lisp= is a custom file that should be created to provide 
                  :on-background-color "white"
                  :primary-color "#c6eaff"
                  :secondary-color "#323232"
-                 :on-secondary-color "#323232"
+                 :on-secondary-color "#a8a8a8"
                  :accent-color "#afafef"
                  :on-accent-color "#a8a8a8"
                  :font-family "Iosevka"
@@ -197,6 +197,8 @@ Above, we define some themes with a name and a set of theme attributes from the 
 #+end_src
 
 The above is an example =cut= which I use in my configuration to achieve a more compact look to Nyxt. However, you're free to modify or not each slot to your heart's content. You can pass different =cut='s to different themes, allowing you to change both the color palette and the layout of Nyxt per theme.
+
+After having defined your themes, you can alternate between them with the =select-theme= command.
 
 [[file:assets/cut-operandi.png]]
 
