@@ -4,6 +4,12 @@
 (defparameter *current-theme* nil
   "Current `user-theme'.")
 
+(defvar *dark-theme-timer* nil
+  "`sb-ext:timer' used to apply the dark theme.")
+
+(defvar *light-theme-timer* nil
+  "`sb-ext:timer' used to apply the light theme.")
+
 (sera:export-always 'make-theme)
 (defun make-theme (name &rest extra-slots &key &allow-other-keys)
   "Builds a `nx-tailor' theme. NAME is required and EXTRA-SLOTS
@@ -20,25 +26,34 @@ can vary depending on the theme complexity."
   (and (listp object)
        (every #'listp object)))
 
+(defun today ()
+  "Compute the correct timestamp for today according to the local timezone
+ given by `local-time:*default-timezone*'."
+  (local-time:adjust-timestamp (local-time:now)
+    (set :hour 0)
+    (set :minute 0)
+    (set :sec 0)
+    (set :nsec 0)))
+
 (define-class cut ()
   ((name
     :type (or null list)
     :documentation "The name of the cut.")
-   (user-buffer
+   (buffer
     :type (or null list)
-    :documentation "A list of CSS rules to tweak a user buffer.")
+    :documentation "A list of CSS rules to tweak the style of `nyxt:buffer'.")
    (prompt
     :type (or null list)
-    :documentation "A list of CSS rules to tweak the prompt buffer.")
+    :documentation "A list of CSS rules to tweak the style of `nyxt:prompt-buffer'.")
    (status
     :type (or null list)
-    :documentation "A list of CSS rules to tweak the status buffer.")
+    :documentation "A list of CSS rules to tweak the style of `nyxt:status-buffer'.")
    (message
     :type (or null list)
-    :documentation "A list of CSS rules to tweak the message area.")
+    :documentation "A list of CSS rules to tweak the style of `nyxt:window'.")
    (hint
     :type (or null list)
-    :documentation "A list of CSS rules to tweak the look of hints."))
+    :documentation "A list of CSS rules to tweak the style of `nyxt/hint-mode:hint-mode'."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
   (:export-slot-names-p t)
@@ -83,7 +98,7 @@ looks through all the children class slots."
   (setf (nyxt::style buffer) (compute-style
                               *current-theme*
                               :element 'nyxt:buffer
-                              :accessor #'user-buffer))
+                              :accessor #'buffer))
   (when (find-submode (resolve-symbol :hint-mode :mode) buffer)
     (setf (nyxt/hint-mode:box-style (find-submode (resolve-symbol :hint-mode :mode) buffer))
           (compute-style *current-theme*
@@ -97,33 +112,113 @@ looks through all the children class slots."
     '()
     :type list
     :documentation "`user-theme' objects among which to select the main interface theme.")
+   (main
+    nil
+    :type (or boolean string user-theme cons)
+    :documentation "If a single theme, this will be chosen at startup if `auto-p' is `nil'. If a cons
+pair and `auto-p' is non-`nil', the light and dark theme variants will be selected from a cons of the form
+(LIGHT-THEME . DARK-THEME) where each element is the name of the corresponding theme.")
    (auto-p
     nil
-    :type boolean
-    :documentation "Whether to automatically apply a `theme' variant based on the system environment.")))
+    :type (or boolean :time :gtk)
+    :documentation "Whether to automatically apply a `theme'. If `:time' or `t', it will apply itself
+based on the time of the day, if `:gtk' it will be applied based on the value
+of `GTK_THEME', or if a matching theme name, it will always choose that theme on startup.")
+   (light-theme-threshold
+    (* 6 60 60)
+    :type number
+    :documentation "Number of seconds after midnight at which the light theme should be activated.")
+   (dark-theme-threshold
+    (* 21 60 60)
+    :type number
+    :documentation "Number of seconds after midnight at which the dark theme should be activated.")))
+
+(defmethod nyxt:customize-instance :after ((mode tailor-mode) &key)
+  (with-slots (light-theme-threshold
+               dark-theme-threshold
+               main
+               themes)
+      mode
+    (flet ((find-theme (name)
+             (find name themes :key #'name :test #'string=)))
+      (setf light-theme-threshold (round light-theme-threshold))
+      (setf dark-theme-threshold (round dark-theme-threshold))
+      (when (consp main)
+        (setf main (cons (find-theme (car main)) (find-theme (cdr main))))))))
 
 (defmethod nyxt:enable ((mode tailor-mode) &key)
-  (with-slots (auto-p) mode
-    (unless (or (not (themes mode))
-                (find (theme *browser*) (themes mode) :test #'equal)
-                *current-theme*)
-      (or (and auto-p
-               (if (str:containsp ":light" (uiop:getenv "GTK_THEME"))
-                   (select-theme (name (find-theme-variant mode)) mode)
-                   (setf (nyxt::style (buffer mode))
-                         (compute-style
-                          (select-theme
-                           (name (find-theme-variant mode :dark t))
-                           mode)
-                          :element 'nyxt:buffer
-                          :accessor #'user-buffer))))
-          (select-theme (name (car (themes mode))) mode))
-      (hooks:add-hook (nyxt:buffer-before-make-hook *browser*) #'theme-handler))))
+  (with-slots (main) mode
+    (let ((light-theme (or (when (consp main)
+                             (car main))
+                           (find-theme-variant mode)))
+          (dark-theme (or (when (consp main)
+                            (cdr main))
+                          (find-theme-variant mode :dark t)))
+          (light-theme-threshold (local-time:timestamp+ (today) (light-theme-threshold mode) :sec))
+          (dark-theme-threshold (local-time:timestamp+ (today) (dark-theme-threshold mode) :sec)))
+      (unless *light-theme-timer*
+        (sb-ext:schedule-timer (setf *light-theme-timer*
+                                     (sb-ext:make-timer (lambda ()
+                                                          (select-theme (name light-theme) mode))
+                                                        :thread t))
+                               (local-time:timestamp-to-universal light-theme-threshold)
+                               :repeat-interval (* 24 60 60)))
+      (unless *dark-theme-timer*
+        (sb-ext:schedule-timer (setf *dark-theme-timer*
+                                     (sb-ext:make-timer (lambda ()
+                                                          (select-theme (name dark-theme) mode))
+                                                        :thread t))
+                               (local-time:timestamp-to-universal dark-theme-threshold)
+                               :absolute-p t
+                               :repeat-interval (* 24 60 60)))
+      (unless (or (not (themes mode))
+                  (find (theme *browser*) (themes mode) :test #'equal)
+                  *current-theme*)
+        (or (select-automatic-theme mode)
+            (when main
+              (typecase (main mode)
+                (string
+                 (select-theme (find main (themes mode) :key #'name :test #'string=) mode))
+                (t
+                 (select-theme (name main) mode))))
+            (select-theme (name (car (themes mode))) mode))
+        (hooks:add-hook (nyxt:buffer-before-make-hook *browser*) #'theme-handler)))))
 
 (defmethod nyxt:disable ((mode tailor-mode) &key)
   (hooks:remove-hook (nyxt:buffer-before-make-hook *browser*) #'theme-handler)
   (hooks:remove-hook (nyxt:prompt-buffer-make-hook *browser*) 'style-prompt-buffer)
-  (setf *current-theme* nil))
+  (setf *current-theme* nil)
+  (when *light-theme-timer*
+    (sb-ext:unschedule-timer *light-theme-timer*))
+  (when *dark-theme-timer*
+    (sb-ext:unschedule-timer *dark-theme-timer*)))
+
+(defun select-automatic-theme (mode)
+  "Automatically set the theme based on the specified criteria in MODE."
+  (alex:when-let ((auto (auto-p mode)))
+    (let* ((light-theme (or (when (consp (main mode))
+                              (car (main mode)))
+                            (find-theme-variant mode)))
+           (dark-theme (or (when (consp (main mode))
+                             (cdr (main mode)))
+                           (find-theme-variant mode :dark t)))
+           (light-theme-threshold (local-time:timestamp+ (today) (light-theme-threshold mode) :sec))
+           (dark-theme-threshold (local-time:timestamp+ (today) (dark-theme-threshold mode) :sec)))
+      (case auto
+        (:gtk
+         (if (or (str:containsp ":light" (uiop:getenv "GTK_THEME"))
+                 (null (uiop:getenv "GTK_THEME")))
+             (select-theme (name light-theme) mode)
+             (select-theme (name dark-theme) mode)))
+        (t
+         (cond
+           ((and (local-time:timestamp> (local-time:now) dark-theme-threshold)
+                 (not (local-time:timestamp< (local-time:now) light-theme-threshold)))
+            (select-theme (name dark-theme) mode))
+           ((local-time:timestamp< (local-time:now) light-theme-threshold)
+            (select-theme (name dark-theme) mode))
+           ((local-time:timestamp> (local-time:now) light-theme-threshold)
+            (select-theme (name light-theme) mode))))))))
 
 (defun find-theme-variant (mode &key dark)
   "Finds the first light theme variant from MODE. If DARK, it finds the first dark theme."
@@ -220,7 +315,7 @@ looks through all the children class slots."
         do (progn
              (setf (nyxt::style buffer) (compute-style *current-theme*
                                                        :element 'nyxt:buffer
-                                                       :accessor #'user-buffer))
+                                                       :accessor #'buffer))
              (nyxt:buffer-load (nyxt:url buffer) :buffer buffer))))
 
 (define-command-global select-theme (&optional name (mode (current-tailor-mode)))
@@ -229,15 +324,18 @@ looks through all the children class slots."
                         (find name (themes mode)
                               :key #'name :test #'string=))
                    (nyxt:prompt1
-                     :prompt "Select theme"
-                     :sources (make-instance 'theme-source)))))
+                    :prompt "Select theme"
+                    :sources (make-instance 'theme-source))))
+        (hint-mode (find-submode (resolve-symbol :hint-mode :mode) (nyxt:buffer mode))))
     (setf *current-theme* theme
           (theme *browser*) theme)
     (reload-style (current-window))
+    ;; TODO: don't rely on creating a bogus prompt buffer
     (reload-style (make-instance 'nyxt:prompt-buffer
                                  :window (current-window)
                                  :sources (make-instance 'prompter:raw-source)))
-    (reload-style (find-submode (resolve-symbol :hint-mode :mode) (buffer mode)))
+    (when hint-mode
+      (reload-style hint-mode))
     (reload-style (current-buffer))
     theme))
 
@@ -245,6 +343,6 @@ looks through all the children class slots."
   "Applies the `*current-theme*' color scheme to the current page."
   (when *current-theme*
     (nyxt::html-set-style
-     (funcall (user-buffer (cut *current-theme*))
+     (funcall (buffer (cut *current-theme*))
               *current-theme*)
      (current-buffer))))
