@@ -147,7 +147,7 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
         (setf main (cons (find-theme (car main)) (find-theme (cdr main))))))))
 
 (defmethod nyxt:enable ((mode tailor-mode) &key)
-  (with-slots (main) mode
+  (with-slots (main auto-p) mode
     (let ((light-theme (or (when (consp main)
                              (car main))
                            (find-theme-variant mode)))
@@ -156,21 +156,23 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
                           (find-theme-variant mode :dark t)))
           (light-theme-threshold (local-time:timestamp+ (today) (light-theme-threshold mode) :sec))
           (dark-theme-threshold (local-time:timestamp+ (today) (dark-theme-threshold mode) :sec)))
-      (unless *light-theme-timer*
-        (sb-ext:schedule-timer (setf *light-theme-timer*
-                                     (sb-ext:make-timer (lambda ()
-                                                          (select-theme (name light-theme) mode))
-                                                        :thread t))
-                               (local-time:timestamp-to-universal light-theme-threshold)
-                               :repeat-interval (* 24 60 60)))
-      (unless *dark-theme-timer*
-        (sb-ext:schedule-timer (setf *dark-theme-timer*
-                                     (sb-ext:make-timer (lambda ()
-                                                          (select-theme (name dark-theme) mode))
-                                                        :thread t))
-                               (local-time:timestamp-to-universal dark-theme-threshold)
-                               :absolute-p t
-                               :repeat-interval (* 24 60 60)))
+      (unless (equal auto-p :gtk)
+        (unless *light-theme-timer*
+          (sb-ext:schedule-timer (setf *light-theme-timer*
+                                       (sb-ext:make-timer (lambda ()
+                                                            (select-theme (name light-theme) mode))
+                                                          :thread t))
+                                 (local-time:timestamp-to-universal light-theme-threshold)
+                                 :absolute-p t
+                                 :repeat-interval (* 24 60 60)))
+        (unless *dark-theme-timer*
+          (sb-ext:schedule-timer (setf *dark-theme-timer*
+                                       (sb-ext:make-timer (lambda ()
+                                                            (select-theme (name dark-theme) mode))
+                                                          :thread t))
+                                 (local-time:timestamp-to-universal dark-theme-threshold)
+                                 :absolute-p t
+                                 :repeat-interval (* 24 60 60))))
       (unless (or (not (themes mode))
                   (find (theme *browser*) (themes mode) :test #'equal)
                   *current-theme*)
