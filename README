@@ -1,8 +1,9 @@
-# -*- mode: org; -*-
-#+title: nx-tailor
+# -*- mode: org; org-html-head-include-default-style: nil; org-html-postamble: nil; -*-
+#+OPTIONS: toc:nil
+* nx-tailor
 =nx-tailor= is an interface to manage [[https://nyxt.atlas.engineer/][Nyxt]] built-in themes. It provides handy features such as allowing users to change the current browser theme on-the-fly or automatically apply them based on system settings or on the time of the day. It offers high customization over the smallest bits of Nyxt's interface, for those that enjoy their browser to match their style.
 
-* Installation
+** Installation
 To install the extension, you should download the source and place it in Nyxt's extensions path, given by the value of =nyxt-source-registry= (by default =~/.local/share/nyxt/extensions=).
 
 #+begin_src sh
@@ -33,11 +34,11 @@ In your Nyxt initialization file, place the following.
 
 Where =/path/to/tailor.lisp= is a custom file that should be created to provide the extension settings after the =nx-tailor= system has been successfully loaded. Inside this file, you should provide the extension options, explained in the following section.
 
-* Configuration
+** Configuration
 =nx-tailor='s configuration is straightforward, as shown in the following example:
 
 #+begin_src lisp
-(import 'nx-tailor:make-theme)
+(import 'tailor:make-theme)
 
 (define-configuration tailor:tailor-mode
   ((tailor:auto-p :time)
@@ -85,14 +86,14 @@ Where =tailor:tailor-mode= slots include:
 - =auto-p= (default: =nil=) :: if =:time= or =t=, it will set the theme based on the time of the day. If =:gtk=, it will apply it based on the current GTK theme (specifically, it will check the =GTK_THEME= variable).
 - =light-theme-threshold= (default: =(* 6 60 60)=) :: if =auto-p= is set to =:time= or =t=, this indicates the number of seconds after midnight at which the light theme should be applied.
 - =dark-theme-threshold= (default: =(* 21 60 60)=) :: if =auto-p= is set to =:time= or =t=, this indicates the number of seconds after midnight at which the dark theme should be applied.
-- =main= :: if =auto-p= is =nil=, this takes a string with the theme name to be selected on browser startup. Otherwise, it can take a cons pair of the form =(LIGHT-THEME . DARK-THEME)= for the corresponding light/dark theme names to be picked from the =themes= list of themes when applying =auto-p= logic. If no =main= is supplied, the first non-=:dark-p= theme from =themes= will be chosen as the light theme and the first =:dark-p= theme from =themes= as the dark theme.
-- =themes= :: a list of themes, with each consisting of a mandatory name, a set of theme attributes from the built-in =nyxt/theme= library and a =:cut=,  an object with that can take lists of CSS rules as its slots for many of Nyxt's interface elements. A =cut= effectively aims at simplifying themeing, which is normally achieved by having to look through the =style= slot of multiple classes.
+- =main= :: if =auto-p= is =nil=, this takes a string with the theme name to be selected on browser startup. Otherwise, it can take a cons pair of the form =(LIGHT-THEME . DARK-THEME)= for the corresponding light/dark theme names to be picked from the =themes= list when applying =auto-p= logic. If no =main= is supplied, the first non-=:dark-p= theme from =themes= will be chosen as the light theme and the first =:dark-p= theme from =themes= as the dark theme.
+- =themes= :: a list of themes, with each consisting of a mandatory name, a set of theme attributes from the built-in =nyxt/theme= library and a =:cut=,  an object that can take lists of CSS rules as its slots for many of Nyxt's interface elements. A =cut= effectively aims at simplifying themeing, which is normally achieved by having to look through the =style= slot of multiple Nyxt classes.
 
 #+begin_src lisp
 (import 'tailor:make-important)
 
 (define-configuration tailor:cut
-  ((tailor:name "Minimal")
+  ((tailor:name "Minimal UI")
    (tailor:prompt
     '((* :font-family theme:font-family)
       ("#prompt-modes"
@@ -124,7 +125,7 @@ Where =tailor:tailor-mode= slots include:
        :font-weight "bold"
        :background-color theme:secondary
        :color theme:on-background)))
-   (tailor:user-buffer
+   (tailor:buffer
     '(("*, body, div, section, input"
        :font-family theme:font-family
        :background-color theme:background
@@ -220,6 +221,5 @@ The above is an example =cut= which I use in my configuration to achieve a more 
 
 After having defined your =themes=, you can quickly choose between them with the =select-theme= command.
 
-[[file:assets/cut-operandi.png]]
-
-[[file:assets/cut-vivendi.png]]
+[[https://git.sr.ht/~conses/nx-tailor/blob/master/assets/cut-operandi.png]]
+[[https://git.sr.ht/~conses/nx-tailor/blob/master/assets/cut-vivendi.png]]
