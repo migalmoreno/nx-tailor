@@ -314,7 +314,7 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
 
 (defmethod reload-style ((element nyxt:buffer))
   (loop for buffer in (nyxt::buffer-initial-suggestions)
-        do (progn
+        do (when (nyxt:internal-url-p (url buffer))
              (setf (nyxt::style buffer) (compute-style *current-theme*
                                                        :element 'nyxt:buffer
                                                        :accessor #'buffer))
