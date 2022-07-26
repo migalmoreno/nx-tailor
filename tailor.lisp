@@ -156,23 +156,6 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
                           (find-theme-variant mode :dark t)))
           (light-theme-threshold (local-time:timestamp+ (today) (light-theme-threshold mode) :sec))
           (dark-theme-threshold (local-time:timestamp+ (today) (dark-theme-threshold mode) :sec)))
-      (unless (equal auto-p :gtk)
-        (unless *light-theme-timer*
-          (sb-ext:schedule-timer (setf *light-theme-timer*
-                                       (sb-ext:make-timer (lambda ()
-                                                            (select-theme (name light-theme) mode))
-                                                          :thread t))
-                                 (local-time:timestamp-to-universal light-theme-threshold)
-                                 :absolute-p t
-                                 :repeat-interval (* 24 60 60)))
-        (unless *dark-theme-timer*
-          (sb-ext:schedule-timer (setf *dark-theme-timer*
-                                       (sb-ext:make-timer (lambda ()
-                                                            (select-theme (name dark-theme) mode))
-                                                          :thread t))
-                                 (local-time:timestamp-to-universal dark-theme-threshold)
-                                 :absolute-p t
-                                 :repeat-interval (* 24 60 60))))
       (unless (or (not (themes mode))
                   (find (theme *browser*) (themes mode) :test #'equal)
                   *current-theme*)
@@ -184,7 +167,25 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
                 (t
                  (select-theme (name main) mode))))
             (select-theme (name (car (themes mode))) mode))
-        (hooks:add-hook (nyxt:buffer-before-make-hook *browser*) #'theme-handler)))))
+        (hooks:add-hook (nyxt:buffer-before-make-hook *browser*) #'theme-handler))
+      (unless (equal auto-p :gtk)
+        (unless *light-theme-timer*
+          (sb-ext:schedule-timer (setf *light-theme-timer*
+                                       (sb-ext:make-timer (lambda ()
+                                                            (select-theme (name light-theme) mode))
+                                                          :thread t))
+                                 (local-time:timestamp-to-universal light-theme-threshold)
+                                 :absolute-p t
+                                 :repeat-interval (* 24 60 60)))
+        (sleep 0.001)
+        (unless *dark-theme-timer*
+          (sb-ext:schedule-timer (setf *dark-theme-timer*
+                                       (sb-ext:make-timer (lambda ()
+                                                            (select-theme (name dark-theme) mode))
+                                                          :thread t))
+                                 (local-time:timestamp-to-universal dark-theme-threshold)
+                                 :absolute-p t
+                                 :repeat-interval (* 24 60 60)))))))
 
 (defmethod nyxt:disable ((mode tailor-mode) &key)
   (hooks:remove-hook (nyxt:buffer-before-make-hook *browser*) #'theme-handler)
