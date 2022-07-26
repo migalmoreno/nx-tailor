@@ -35,7 +35,7 @@ In your Nyxt initialization file, place the following.
 Where =/path/to/tailor.lisp= is a custom file that should be created to provide the extension settings after the =nx-tailor= system has been successfully loaded. Inside this file, you should provide the extension options, explained in the following section.
 
 ** Configuration
-=nx-tailor='s configuration is straightforward, as shown in the following example:
+=nx-tailor= configuration is straightforward, as shown in the following example:
 
 #+begin_src lisp
 (import 'tailor:make-theme)
@@ -223,3 +223,5 @@ After having defined your =themes=, you can quickly choose between them with the
 
 [[https://git.sr.ht/~conses/nx-tailor/blob/master/assets/cut-operandi.png]]
 [[https://git.sr.ht/~conses/nx-tailor/blob/master/assets/cut-vivendi.png]]
+** Contributing
+You can use the project's [[https://lists.sr.ht/~conses/nx-tailor][mailing list]] to send feedback, patches or open discussions. Bugs should be reported on the project's [[https://todo.sr.ht/~conses/nx-tailor][bug-tracker]].
