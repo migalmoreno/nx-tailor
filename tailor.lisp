@@ -100,14 +100,14 @@ look through all the children class slots."
                               :element 'nyxt:buffer
                               :accessor #'buffer))
   (when (find-submode (resolve-symbol :hint-mode :mode) buffer)
-    (setf (nyxt/hint-mode:box-style (find-submode (resolve-symbol :hint-mode :mode) buffer))
+    (setf (nyxt/hint-mode::style (find-submode (resolve-symbol :hint-mode :mode) buffer))
           (compute-style *current-theme*
                          :element 'nyxt/hint-mode:hint-mode
-                         :style-slot 'nyxt/hint-mode:box-style
+                         :style-slot 'nyxt/hint-mode::style
                          :accessor #'hint))))
 
 (define-mode tailor-mode ()
-  "Mode that manages custom browser themes."
+  "Manage custom browser themes and apply them on predefined criteria."
   ((themes
     '()
     :type list
@@ -302,15 +302,10 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
                          :name 'style-prompt)))))
 
 (defmethod reload-style ((element nyxt/hint-mode:hint-mode))
-  (setf (nyxt/hint-mode:box-style element)
+  (setf (nyxt/hint-mode::style element)
         (compute-style *current-theme*
                        :element 'nyxt/hint-mode:hint-mode
-                       :style-slot 'nyxt/hint-mode:box-style
-                       :accessor #'hint)
-        (nyxt/hint-mode:highlighted-box-style element)
-        (compute-style *current-theme*
-                       :element 'nyxt/hint-mode:hint-mode
-                       :style-slot 'nyxt/hint-mode:highlighted-box-style
+                       :style-slot 'nyxt/hint-mode::style
                        :accessor #'hint)))
 
 (defmethod reload-style ((element nyxt:buffer))
