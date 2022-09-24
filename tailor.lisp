@@ -12,17 +12,17 @@
 
 (sera:export-always 'make-theme)
 (defun make-theme (name &rest extra-slots &key &allow-other-keys)
-  "Builds a `nx-tailor' theme. NAME is required and EXTRA-SLOTS
+  "Build a `nx-tailor' theme. NAME is required and EXTRA-SLOTS
 can vary depending on the theme complexity."
   (apply #'make-instance 'user-theme :name name extra-slots))
 
 (sera:export-always 'make-important)
 (defun make-important (value)
-  "Outputs a CSS `!important' rule for VALUE."
+  "Output a CSS `!important' rule for VALUE."
   (format nil "~a !important" value))
 
 (defun list-of-lists-p (object)
-  "Returns non-nil of OBJECT consists of a list of lists."
+  "Return non-nil of OBJECT consists of a list of lists."
   (and (listp object)
        (every #'listp object)))
 
@@ -69,7 +69,7 @@ can vary depending on the theme complexity."
    (cut
     nil
     :type (or null cut)
-    :documentation "`cut' provides styling for interface parts and allows to dynamically
+    :documentation "Provide styling for interface elements and allow to dynamically
 change themes within a browser session."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
@@ -81,8 +81,8 @@ change themes within a browser session."))
    (prompter:active-attributes-keys '("Name"))))
 
 (defun get-original-style (element &optional style-slot parent-class)
-  "Finds the original STYLE-SLOT slot value of ELEMENT. If PARENT-CLASS,
-looks through all the children class slots."
+  "Find the original STYLE-SLOT slot value of ELEMENT. If PARENT-CLASS,
+look through all the children class slots."
   (sb-mop:slot-definition-initform
    (find (or style-slot 'nyxt:style)
          (if parent-class
@@ -196,7 +196,7 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
   (when *dark-theme-timer*
     (sb-ext:unschedule-timer *dark-theme-timer*)))
 
-(defun select-automatic-theme (mode)
+(defmethod select-automatic-theme ((mode tailor-mode))
   "Automatically set the theme based on the specified criteria in MODE."
   (alex:when-let ((auto (auto-p mode)))
     (let* ((light-theme (or (when (consp (main mode))
@@ -224,13 +224,13 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
             (select-theme (name light-theme) mode))))))))
 
 (defun find-theme-variant (mode &key dark)
-  "Finds the first light theme variant from MODE. If DARK, it finds the first dark theme."
+  "Find the first light theme variant from MODE. If DARK, find the first dark theme."
   (if dark
       (find-if #'theme:dark-p (themes mode))
       (find-if-not #'theme:dark-p (themes mode))))
 
 (defun current-tailor-mode ()
-  "Returns `tailor-mode' if it's active in the current buffer."
+  "Return `tailor-mode' if it's active in the current buffer."
   (find-submode
    (resolve-symbol :tailor-mode :mode '(:nx-tailor))))
 
@@ -322,7 +322,7 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
              (nyxt:buffer-load (nyxt:url buffer) :buffer buffer))))
 
 (define-command-global select-theme (&optional name (mode (current-tailor-mode)))
-  "Selects a `user-theme' with NAME from MODE and applies it."
+  "Select a `user-theme' with NAME from MODE and apply it."
   (let ((theme (or (and name
                         (find name (themes mode)
                               :key #'name :test #'string=))
@@ -343,7 +343,7 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
     theme))
 
 (define-command-global apply-current-theme ()
-  "Applies the `*current-theme*' color scheme to the current page."
+  "Apply the `*current-theme*' color scheme to the current page."
   (when *current-theme*
     (nyxt::html-set-style
      (funcall (buffer (cut *current-theme*))
