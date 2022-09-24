@@ -177,7 +177,7 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
                                  (local-time:timestamp-to-universal light-theme-threshold)
                                  :absolute-p t
                                  :repeat-interval (* 24 60 60)))
-        (sleep 0.001)
+        (sleep 0.01)
         (unless *dark-theme-timer*
           (sb-ext:schedule-timer (setf *dark-theme-timer*
                                        (sb-ext:make-timer (lambda ()
