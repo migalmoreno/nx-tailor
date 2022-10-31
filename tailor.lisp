@@ -114,7 +114,7 @@ look through all the children class slots."
     :documentation "`user-theme' objects among which to select the main interface theme.")
    (main
     nil
-    :type (or boolean string user-theme cons)
+    :type (or boolean :dark :light string user-theme cons)
     :documentation "If a single theme, this will be chosen at startup if `auto-p' is `nil'. If a cons
 pair and `auto-p' is non-`nil', the light and dark theme variants will be selected from a cons of the form
 (LIGHT-THEME . DARK-THEME) where each element is the name of the corresponding theme.")
@@ -161,14 +161,17 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
                   *current-theme*)
         (or (select-automatic-theme mode)
             (when main
-              (typecase (main mode)
-                (string
-                 (select-theme (find main (themes mode) :key #'name :test #'string=) mode))
-                (t
-                 (select-theme (name main) mode))))
+              (select-theme
+               (name
+                (cond
+                  ((eq main :light) light-theme)
+                  ((eq main :dark) dark-theme)
+                  ((stringp main) (find main (themes mode) :key #'name :test #'string=))
+                  (t main)))
+               mode))
             (select-theme (name (car (themes mode))) mode))
         (hooks:add-hook (nyxt:buffer-before-make-hook *browser*) #'theme-handler))
-      (unless (equal auto-p :gtk)
+      (unless (or (not auto-p) (equal auto-p :gtk))
         (unless *light-theme-timer*
           (sb-ext:schedule-timer (setf *light-theme-timer*
                                        (sb-ext:make-timer (lambda ()
@@ -176,7 +179,7 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
                                                           :thread t))
                                  (local-time:timestamp-to-universal light-theme-threshold)
                                  :absolute-p t
-                                 :repeat-interval (* 24 60 60)))
+                                 :repeat-interval 86400))
         (sleep 0.01)
         (unless *dark-theme-timer*
           (sb-ext:schedule-timer (setf *dark-theme-timer*
@@ -185,7 +188,7 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
                                                           :thread t))
                                  (local-time:timestamp-to-universal dark-theme-threshold)
                                  :absolute-p t
-                                 :repeat-interval (* 24 60 60)))))))
+                                 :repeat-interval 86400))))))
 
 (defmethod nyxt:disable ((mode tailor-mode) &key)
   (hooks:remove-hook (nyxt:buffer-before-make-hook *browser*) #'theme-handler)
@@ -318,9 +321,7 @@ of `GTK_THEME', or if a matching theme name, it will always choose that theme on
 
 (define-command-global select-theme (&optional name (mode (current-tailor-mode)))
   "Select a `user-theme' with NAME from MODE and apply it."
-  (let ((theme (or (and name
-                        (find name (themes mode)
-                              :key #'name :test #'string=))
+  (let ((theme (or (and name (find name (themes mode) :key #'name :test #'string=))
                    (nyxt:prompt1
                     :prompt "Select theme"
                     :sources (make-instance 'theme-source))))
