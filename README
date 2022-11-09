@@ -1,7 +1,7 @@
 # -*- mode: org; org-html-head-include-default-style: nil; org-html-postamble: nil; -*-
 #+OPTIONS: toc:nil
 * nx-tailor
-=nx-tailor= is an interface to manage [[https://nyxt.atlas.engineer/][Nyxt]] built-in themes. It provides handy features such as allowing users to change the current browser theme on-the-fly or automatically apply them based on system settings or on the time of the day. It offers high customization over the smallest bits of Nyxt's interface, for those that enjoy their browser to match their style.
+=nx-tailor= is a thin wrapper over the [[https://nyxt.atlas.engineer/][Nyxt]] built-in theme library (=nyxt/theme=). Its main purpose is to allow handling multiple themes inside a single browser session (useful for night/day theme switching) and to streamline theme selection on startup based on user configuration or predefined criteria.
 
 ** Installation
 To install the extension, you should download the source and place it in Nyxt's extensions path, given by the value of =nyxt-source-registry= (by default =~/.local/share/nyxt/extensions=).
@@ -10,7 +10,7 @@ To install the extension, you should download the source and place it in Nyxt's 
 git clone https://git.sr.ht/~conses/nx-tailor ~/.local/share/nyxt/extensions/nx-tailor
 #+end_src
 
-The extension works with *Nyxt 3 onward*, so ensure to use it with the latest version of Nyxt master for the time being.
+The extension works with *Nyxt 3 onward* but it's encouraged to use it with the latest version of Nyxt master for the time being.
 
 If you want to place the extension elsewhere in the system, such as for development purposes, you can configure so via the ASDF source registry mechanism. For this, you'll need to create a file in the source registry directory, =~/.config/common-lisp/source-registry.conf.d/=, and then put the following contents into it, replacing the path with the desired system path.
 
@@ -21,33 +21,37 @@ If you want to place the extension elsewhere in the system, such as for developm
 
 Then, make sure to refresh the ASDF cache via =asdf:clear-source-registry=. ASDF will now be able to find the extension on the custom path. For more information on this utility, please refer to the [[https://asdf.common-lisp.dev/asdf.html][ASDF manual]].
 
-However, by default Nyxt won't read the custom source registry path we provided, so ensure to include a =reset-asdf-registries= invocation in the Nyxt's initialization file too.
+By default, Nyxt won't read the custom source registry path we provided, so ensure to include a =reset-asdf-registries= invocation in Nyxt's configuration file too.
 
-In your Nyxt initialization file, place the following.
+In your Nyxt configuration file, place the following.
 
 #+begin_src lisp
-(load-after-system :nx-tailor (nyxt-config-file "/path/to/tailor.lisp"))
+(define-nyxt-user-system-and-load nyxt-user/tailor
+  :depends-on (nx-tailor)
+  :components ("tailor.lisp"))
+#+end_src
 
-(define-configuration buffer
+Where =tailor.lisp= is a custom file that you should create relative to Nyxt's configuration directory (=*config-file*='s pathname by default) to provide the extension settings after the =nx-tailor= system has been successfully loaded. Inside this file, place the following.
+
+#+begin_src lisp
+(define-configuration web-buffer
   ((default-modes `(tailor:tailor-mode ,@%slot-default%))))
 #+end_src
 
-Where =/path/to/tailor.lisp= is a custom file that should be created to provide the extension settings after the =nx-tailor= system has been successfully loaded. Inside this file, you should provide the extension options, explained in the following section.
+In addition, you should provide the extension options, explained in the following section.
 
 ** Configuration
-=nx-tailor= configuration is straightforward, as shown in the following example:
+As mentioned, =nx-tailor= is just a layer above the =nyxt/theme= library, which is why its configuration is quite minimal.
 
 #+begin_src lisp
-(import 'tailor:make-theme)
-
 (define-configuration tailor:tailor-mode
   ((tailor:auto-p :time)
    (tailor:light-theme-threshold (* 8 60 60))
    (tailor:dark-theme-threshold (* 21.5 60 60))
-   (tailor:main '("Modus Operandi" . "Dracula"))
+   (tailor:main '(modus-operandi . modus-vivendi))
    (tailor:themes
     (list
-     (make-theme "Modus Operandi"
+     (make-theme 'modus-operandi
                  :background-color "white"
                  :on-background-color "black"
                  :primary-color "#093060"
@@ -55,9 +59,8 @@ Where =/path/to/tailor.lisp= is a custom file that should be created to provide 
                  :on-secondary-color "#f0f0f0"
                  :accent-color "#8f0075"
                  :on-accent-color "#005a5f"
-                 :font-family "Iosevka"
-                 :cut (make-instance 'tailor:cut))
-     (make-theme "Modus Vivendi"
+                 :font-family "Iosevka")
+     (make-theme 'modus-vivendi
                  :dark-p t
                  :background-color "black"
                  :on-background-color "white"
@@ -66,162 +69,35 @@ Where =/path/to/tailor.lisp= is a custom file that should be created to provide 
                  :on-secondary-color "#a8a8a8"
                  :accent-color "#afafef"
                  :on-accent-color "#a8a8a8"
-                 :font-family "Iosevka"
-                 :cut (make-instance 'tailor:cut))
-     (make-theme "Dracula"
-                 :dark-p t
-                 :background-color "#282a36"
-                 :on-background-color "#f8f8f2"
-                 :primary-color "#bd93f9"
-                 :secondary-color "#6272a4"
-                 :on-secondary-color "#f8f8f2"
-                 :accent-color "#8be9fd"
-                 :on-accent-color "#282a36"
-                 :font-family "Iosevka"
-                 :cut (make-instance 'tailor:cut))))))
+                 :font-family "Iosevka")))))
 #+end_src
 
 Where =tailor:tailor-mode= slots include:
 
 - =auto-p= (default: =nil=) :: if =:time= or =t=, it will set the theme based on the time of the day. If =:gtk=, it will apply it based on the current GTK theme (specifically, it will check the =GTK_THEME= variable).
-- =light-theme-threshold= (default: =(* 6 60 60)=) :: if =auto-p= is set to =:time= or =t=, this indicates the number of seconds after midnight at which the light theme should be applied.
-- =dark-theme-threshold= (default: =(* 21 60 60)=) :: if =auto-p= is set to =:time= or =t=, this indicates the number of seconds after midnight at which the dark theme should be applied.
-- =main= :: if =auto-p= is =nil=, this takes a string with the theme name to be selected at browser startup. Otherwise, it can take a cons pair of the form =(LIGHT-THEME . DARK-THEME)= for the corresponding light/dark theme names to be picked from the =themes= list when applying =auto-p= logic. If no =main= is supplied, the first non-=:dark-p= theme from =themes= will be chosen as the light theme and the first =:dark-p= theme from =themes= as the dark theme.
-- =themes= :: a list of themes, with each consisting of a mandatory name, a set of theme attributes from the built-in =nyxt/theme= library and a =:cut=,  an object that can take lists of CSS rules as its slots for many of Nyxt's interface elements. A =cut= effectively aims at simplifying themeing, which is normally achieved by having to look through the =style= slot of multiple Nyxt classes.
+- =light-theme-threshold= (default: =(* 6 60 60)=) :: if =auto-p= is set to =:time= or =t=, this indicates the number of seconds after midnight when the light theme should be applied.
+- =dark-theme-threshold= (default: =(* 21 60 60)=) :: if =auto-p= is set to =:time= or =t=, this indicates the number of seconds after midnight when the dark theme should be applied.
+- =main= :: if =auto-p= is =nil=, this takes a symbol with the theme ID to be selected at browser startup. Otherwise, it can take a cons pair of the form =(LIGHT-THEME . DARK-THEME)= for the corresponding light/dark theme IDs to be picked from the =themes= list when applying =auto-p= logic. If no =main= is supplied, the first non-=:dark-p= theme from =themes= will be chosen as the light theme and the first =:dark-p= theme from =themes= as the dark theme.
+- =themes= :: a list of =theme:theme= themes, each consisting of a mandatory symbol ID and the set of theme attributes as per the =theme:theme= constructor.
+
+That's all you need for the extension to work. To see it take effect, simply invoke the =load-theme= command and you'll see the theme change on the fly.
+
+Now, if you want to tweak Nyxt's appearance further than its color palette by changing some CSS bits, =nx-tailor= provides the =tailor:with-style= macro that takes a class symbol and a list of CSS rules. Essentially, this is a wrapper over =theme:themed-css= which ensures your rules will get applied based on the correct theme. That is, if you include a theme dynamic variable (e.g. =theme:primary=) or a non-atomic expression in your style definition, their value will change depending on the currently-loaded theme. An example style definition in =with-style= form is shown below.
 
 #+begin_src lisp
-(import 'tailor:make-important)
-
-(define-configuration tailor:cut
-  ((tailor:name "Minimal UI")
-   (tailor:prompt
-    '((* :font-family theme:font-family)
-      ("#prompt-modes"
-       :display "none")
-      ("#prompt-area"
-       :background-color theme:secondary
-       :color theme:on-secondary
-       :border "1px solid"
-       :border-color (if (theme:dark-p theme:theme)
-                         theme:on-secondary
-                         theme:on-background))
-      ("#input"
-       :background-color theme:secondary
-       :color theme:on-background)
-      (".source-content"
-       :border "none"
-       :border-collapse collapse)
-      (".source-name"
-       :background-color theme:background
-       :color theme:on-background
-       :font-style "italic")
-      (".source-content th"
-       :padding-left "0"
-       :background-color theme:background
-       :font-weight "bold")
-      (".source-content td"
-       :padding "0 2px")
-      ("#selection"
-       :font-weight "bold"
-       :background-color theme:secondary
-       :color theme:on-background)))
-   (tailor:buffer
-    '(("*, body, div, section, input"
-       :font-family theme:font-family
-       :background-color theme:background
-       :color theme:on-background)
-      ("h1,h2,h3,h4,h5,h6"
-       :font-family "IBM Plex Sans"
-       :color (make-important theme:primary))
-      ("p,pre,td,dt"
-       :font-family "IBM Plex Sans"
-       :color theme:on-background)
-      (pre
-       :font-family "Iosevka"
-       :background-color (make-important theme:background))
-      ("button, a, a:link"
-       :color theme:on-background
-       :font-family "IBM Plex Sans")
-      (".button, .button:hover , .button:visited, .button:active"
-       :background-color theme:secondary
-       :border "1px solid"
-       :border-color (if (theme:dark-p theme:theme)
-                         theme:on-secondary
-                         theme:on-background)
-       :color theme:on-background)
-      (code
-       :font-family "Iosevka"
-       :color (make-important theme:on-background)
-       :background-color (make-important theme:secondary))))
-   (tailor:status
-    '((body
-       :font-family theme:font-family
-       :height "100%"
-       :width "100%"
-       :border "1px solid"
-       :border-color (if (theme:dark-p theme:theme)
-                         theme:on-secondary
-                         theme:on-background)
-       :box-sizing "border-box"
-       :line-height "20px"
-       :display "flex"
-       :flex-direction "column"
-       :background theme:secondary
-       :flex-wrap "wrap")
+(define-configuration status-buffer
+  ((style
+    (tailor:with-style 'status-buffer
       ("#container"
-       :display "flex"
-       :height "100%"
-       :width "100%"
-       :line-height "20px"
-       :justify-content "space-between"
-       :align-items "center")
-      ("#buttons"
-       :display "flex"
-       :align-items "center"
-       :justify-content "center"
-       :line-height "20px"
-       :height "100%")
-      ("#url"
-       :font-weight "bold"
-       :max-width "60%"
-       :padding-right "0"
-       :padding-left "5px"
-       :text-overflow "ellipsis"
-       :background-color theme:secondary
-       :color theme:on-background
-       :box-sizing "border-box"
-       :z-index "auto")
-      ("#tabs, #controls" :display "none")
-      ("#modes"
-       :padding-right "2px"
-       :background-color theme:secondary
-       :box-sizing "border-box"
-       :color theme:on-background
-       :display "flex"
-       :justify-contents "flex-end"
-       :z-index "auto")
-      (.button
-       :color theme:on-background)))
-   (tailor:message
-    '((body
-       :color theme:on-background
-       :background-color theme:background
-       :font-family theme:font-family)))
-   (tailor:hint
-    '((".nyxt-hint"
-       :background-color theme:primary
-       :color theme:background
-       :font-weight "bold"
-       :padding "0px 3px"
-       :opacity 1
-       :border-radius "2px")))))
+       :background theme:primary
+       :color (if (theme:dark-p theme:theme)
+                  theme:on-background
+                  theme:on-accent))
+      ("#controls"
+       :background "inherit")))))
 #+end_src
 
-The above is an example =cut= which I use in my configuration to achieve a more compact look to Nyxt. However, you're free to modify or not each slot to your heart's content. You can pass different =cut='s to different themes, allowing you to change both the color palette and the layout of Nyxt per theme.
+By doing this, we'll allow =nx-tailor= to handle the styling of the interface element (=nyxt:status-buffer= in the above case).
 
-After having defined your =themes=, you can quickly choose between them with the =select-theme= command.
-
-[[https://git.sr.ht/~conses/nx-tailor/blob/master/assets/cut-operandi.png]]
-[[https://git.sr.ht/~conses/nx-tailor/blob/master/assets/cut-vivendi.png]]
 ** Contributing
 You can use the project's [[https://lists.sr.ht/~conses/nx-tailor][mailing list]] to send feedback, patches or open discussions. Bugs should be reported on the project's [[https://todo.sr.ht/~conses/nx-tailor][bug-tracker]].
