@@ -12,6 +12,5 @@
                 #:current-buffer
                 #:current-window
                 #:find-submode
-                #:resolve-symbol
                 #:url)
   (:documentation "An interface to manage themes in Nyxt."))
