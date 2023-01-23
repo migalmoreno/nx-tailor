@@ -1,7 +1,7 @@
 # -*- mode: org; org-html-head-include-default-style: nil; org-html-postamble: nil; -*-
 #+OPTIONS: toc:nil
 * nx-tailor
-=nx-tailor= is a thin wrapper over the [[https://nyxt.atlas.engineer/][Nyxt]] built-in theme library (=nyxt/theme=). Its main purpose is to allow handling multiple themes inside a single browser session (useful for night/day theme switching) and to streamline theme selection on startup based on user configuration or predefined criteria.
+=nx-tailor= is a thin wrapper over the [[https://nyxt.atlas.engineer/][Nyxt]] built-in theme library (=nyxt/theme=). Its main purpose is to allow handling multiple themes inside a single browser session (useful for night/day theme switching) and to streamline theme selection on startup based on user configuration.
 
 ** Installation
 To install the extension, you should download the source and place it in Nyxt's extensions path, given by the value of =nyxt-source-registry= (by default =~/.local/share/nyxt/extensions=).
