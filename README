@@ -1,5 +1,5 @@
 # -*- mode: org; org-html-head-include-default-style: nil; org-html-postamble: nil; -*-
-#+OPTIONS: toc:nil
+#+OPTIONS: toc:nil num:nil
 * nx-tailor
 =nx-tailor= is a thin wrapper over the [[https://nyxt.atlas.engineer/][Nyxt]] built-in theme library (=nyxt/theme=). Its main purpose is to allow handling multiple themes inside a single browser session (useful for night/day theme switching) and to streamline theme selection on startup based on user configuration.
 
@@ -10,7 +10,7 @@ To install the extension, you should download the source and place it in Nyxt's 
 git clone https://git.sr.ht/~conses/nx-tailor ~/.local/share/nyxt/extensions/nx-tailor
 #+end_src
 
-The extension works with *Nyxt 3 onward* but it's encouraged to use it with the latest version of Nyxt master for the time being.
+The extension works with *Nyxt 3 onward* but it's encouraged to use it with the latest version of Nyxt master for the time being. It also requires you to use the [[https://www.sbcl.org/manual/][SBCL]] Common Lisp implementation to make use of the scheduling capabilities for automatic theme switching.
 
 If you want to place the extension elsewhere in the system, such as for development purposes, you can configure so via the ASDF source registry mechanism. For this, you'll need to create a file in the source registry directory, =~/.config/common-lisp/source-registry.conf.d/=, and then put the following contents into it, replacing the path with the desired system path.
 
