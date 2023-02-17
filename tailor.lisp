@@ -149,10 +149,11 @@ Optionally, retrieve the original style of OBJ via STYLE-SLOT."
 
 (defmethod load-style (style (nyxt-mode nyxt:mode))
   (flet ((style-mode (mode)
-           (setf (slot-value nyxt-mode 'nyxt:style)
-                 (compute-current-style style nyxt-mode))))
-    (style-mode nyxt-mode)
-    (hooks:add-hook (nyxt:enable-mode-hook (nyxt:buffer nyxt-mode))
+           (setf (slot-value mode 'nyxt:style)
+                 (compute-current-style style mode))))
+    (hooks:once-on (nyxt:buffer-loaded-hook (buffer nyxt-mode)) (_)
+      (style-mode nyxt-mode))
+    (hooks:add-hook (nyxt:enable-mode-hook (buffer nyxt-mode))
                     (make-instance 'hooks:handler
                                    :fn #'style-mode
                                    :name 'style-mode))))
@@ -248,9 +249,9 @@ If DARK, find the first dark `user-theme'."
                     (local-time:timestamp-to-universal threshold)
                     :absolute-p t
                     :repeat-interval 86400))))
-          (set-timer *light-theme-timer* light-theme light-theme-threshold)
-          (sleep 0.01)
-          (set-timer *dark-theme-timer* dark-theme dark-theme-threshold))))))
+          (hooks:once-on (nyxt:buffer-loaded-hook (buffer mode)) (_)
+            (set-timer *light-theme-timer* light-theme light-theme-threshold)
+            (set-timer *dark-theme-timer* dark-theme dark-theme-threshold)))))))
 
 (defmethod nyxt:disable ((mode tailor-mode) &key)
   (hooks:remove-hook (nyxt:buffer-before-make-hook *browser*) 'style-web-buffer)
