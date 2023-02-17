@@ -60,7 +60,7 @@ criteria in `tailor-mode'."))
 
 (defun current-tailor-mode ()
   "Return `tailor-mode' if it's active in the current buffer."
-  (alex:when-let ((mode (nyxt:resolve-symbol :tailor-mode :mode '(:nx-tailor))))
+  (alex:when-let ((mode (sym:resolve-symbol :tailor-mode :mode '(:nx-tailor))))
     (find-submode mode)))
 
 (sera:export-always 'with-style)
