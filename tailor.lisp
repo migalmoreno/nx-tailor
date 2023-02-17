@@ -282,16 +282,16 @@ If DARK, find the first dark `user-theme'."
                              (some (lambda (slot)
                                      (eq 'nyxt:style slot))
                                    (mopu:slot-names (class-of mode))))
-                           (nyxt:modes (nyxt:buffer mode)))))
-
+                           (nyxt:modes (buffer mode)))))
       (setf *current-theme* theme)
       (setf (theme *browser*) theme)
       (load-style (find-style 'nyxt:window) (current-window))
-      (load-style (find-style 'nyxt:web-buffer) (nyxt:buffer mode))
+      (load-style (find-style 'nyxt:web-buffer) (buffer mode))
       (load-style (find-style 'nyxt:status-buffer) (nyxt:status-buffer (current-window)))
       (load-style (find-style 'nyxt:prompt-buffer) prompt-buffer)
       (loop for mode-style in modes-with-style
             do (load-style (find-style (class-name (class-of mode-style))) mode-style))
+      (nyxt::echo (format nil "Loaded theme ~a" (id theme)))
       theme)))
 
 (defmethod load-automatic-theme ((mode tailor-mode))
