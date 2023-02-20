@@ -151,12 +151,12 @@ Optionally, retrieve the original style of OBJ via STYLE-SLOT."
   (flet ((style-mode (mode)
            (setf (slot-value mode 'nyxt:style)
                  (compute-current-style style mode))))
-    (hooks:once-on (nyxt:buffer-loaded-hook (buffer nyxt-mode)) (_)
-      (style-mode nyxt-mode))
-    (hooks:add-hook (nyxt:enable-mode-hook (buffer nyxt-mode))
-                    (make-instance 'hooks:handler
-                                   :fn #'style-mode
-                                   :name 'style-mode))))
+    (hooks:once-on (nyxt:buffer-loaded-hook (buffer nyxt-mode)) (buffer)
+      (style-mode nyxt-mode)
+      (hooks:add-hook (nyxt:enable-mode-hook buffer)
+                      (make-instance 'hooks:handler
+                                     :fn #'style-mode
+                                     :name 'style-mode)))))
 
 (define-mode tailor-mode ()
   "Manage and apply user-defined browser themes on predefined criteria."
