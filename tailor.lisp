@@ -206,7 +206,7 @@ should be activated.")
       (when (consp main)
         (setf main (cons (find-theme (car main)) (find-theme (cdr main))))))))
 
-(defun find-theme-variant (mode &key dark)
+(defun find-theme (mode &key dark)
   "Find the first light `user-theme' in MODE.
 If DARK, find the first dark `user-theme'."
   (if dark
@@ -217,14 +217,10 @@ If DARK, find the first dark `user-theme'."
   (with-slots (main themes auto-p) mode
     (let ((light-theme (or (when (consp main)
                              (car main))
-                           (find-theme-variant mode)))
+                           (find-theme mode)))
           (dark-theme (or (when (consp main)
                             (cdr main))
-                          (find-theme-variant mode :dark t)))
-          (light-theme-threshold
-            (local-time:timestamp+ (today) (light-theme-threshold mode) :sec))
-          (dark-theme-threshold
-            (local-time:timestamp+ (today) (dark-theme-threshold mode) :sec)))
+                          (find-theme mode :dark t))))
       (unless (or (not themes)
                   (find (theme *browser*) themes :test #'equal)
                   *current-theme*)
