@@ -96,13 +96,13 @@ Now, if you want to tweak Nyxt's appearance further than its color palette by ch
 (define-configuration status-buffer
   ((style
     (tailor:with-style 'status-buffer
-      ("#container"
-       :background theme:primary
-       :color (if (theme:dark-p theme:theme)
-                  theme:on-background
-                  theme:on-accent))
-      ("#controls"
-       :background "inherit")))))
+      `("#container"
+        :background ,theme:primary
+        :color ,(if (theme:dark-p theme:theme)
+                    theme:on-background
+                    theme:on-accent))
+      `("#controls"
+        :background "inherit")))))
 #+end_src
 
 By doing this, we'll allow =nx-tailor= to handle the styling of the interface element (=nyxt:status-buffer= in the above case).
