@@ -40,6 +40,14 @@ Where =tailor.lisp= is a custom file that you should create relative to Nyxt's c
 
 In addition, you should provide the extension options, explained in the following section.
 
+To ensure automatic theme switching works accurately both at startup and through the timers, you should have the following snippet in your configuration *before* the =nyxt-user= system definition shown above.
+
+#+begin_src lisp
+(local-time:reread-timezone-repository)
+(setf local-time:*default-timezone*
+      (local-time:find-timezone-by-location-name "<your_timezone>"))
+#+end_src
+
 ** Configuration
 As mentioned, =nx-tailor= is just a layer above the =nyxt/theme= library, which is why its configuration is quite minimal.
 
