@@ -108,4 +108,4 @@ Now, if you want to tweak Nyxt's appearance further than its color palette by ch
 By doing this, we'll allow =nx-tailor= to handle the styling of the interface element (=nyxt:status-buffer= in the above case).
 
 ** Contributing
-You can use the project's [[https://lists.sr.ht/~conses/nx-tailor][mailing list]] to send feedback, patches or open discussions. Bugs should be reported on the project's [[https://todo.sr.ht/~conses/nx-tailor][bug-tracker]].
+You can use the project's [[https://lists.sr.ht/~mmoreno/nx-tailor][mailing list]] to send feedback, patches or open discussions. Bugs should be reported on the project's [[https://todo.sr.ht/~mmoreno/nx-tailor][bug-tracker]].
