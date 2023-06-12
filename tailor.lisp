@@ -14,12 +14,6 @@ by including `with-style' invocations in their configuration.")
 (defvar *light-theme-timer* nil
   "`sb-ext:timer' used to apply the light theme.")
 
-(sera:export-always 'make-theme)
-(defun make-theme (id &rest extra-slots &key &allow-other-keys)
-  "Build a `nx-tailor' theme. ID is required and EXTRA-SLOTS
-will be supplied to the `theme:theme' constructor"
-  (apply #'make-instance 'user-theme :id id extra-slots))
-
 (defun today ()
   "Compute the correct timestamp for today according to
  the local timezone given by `local-time:*default-timezone*'."
