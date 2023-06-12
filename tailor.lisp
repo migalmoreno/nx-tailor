@@ -26,7 +26,7 @@ by including `with-style' invocations in their configuration.")
 (define-class theme-source (prompter:source)
   ((prompter:name "User themes")
    (prompter:constructor (themes (current-tailor-mode)))
-   (prompter:active-attributes-keys '("Id"))))
+   (prompter:active-attributes-keys '("Name"))))
 
 (define-class style ()
   ((sym
@@ -43,11 +43,9 @@ new style based on its value."))
   (:accessor-name-transformer (class*:make-name-transformer name)))
 
 (define-class user-theme (theme:theme)
-  ((id
+  ((name
     nil
-    :type (or null symbol)
-    :documentation "The theme identifier to use for setting
-criteria in `tailor-mode'."))
+    :type (or null symbol)))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
   (:accessor-name-transformer (class*:make-name-transformer name)))
@@ -162,12 +160,12 @@ Optionally, retrieve the original style of OBJ via STYLE-SLOT."
    (main
     nil
     :type (or symbol :dark :light cons null)
-    :documentation "If a single theme id is specified, it will be chosen
+    :documentation "If a single theme name is specified, it will be chosen
 at startup if `auto-p' is `nil'. If either `:dark' or `:light' is passed,
 the corresponding `user-theme' will be selected at startup.
 If a cons pair is specified and `auto-p' is non-`nil', the light and dark
 theme variants will be selected from the pair in the form
-(LIGHT-THEME . DARK-THEME) where each cell is the id of the theme.")
+(LIGHT-THEME . DARK-THEME) where each cell is the name of the theme.")
    (auto-p
     nil
     :type (or boolean :time :gtk)
@@ -193,8 +191,8 @@ should be activated.")
                main
                themes)
       mode
-    (flet ((find-theme (id)
-             (find id themes :key #'id)))
+    (flet ((find-theme (name)
+             (find name themes :key #'name)))
       (setf light-theme-threshold (round light-theme-threshold))
       (setf dark-theme-threshold (round dark-theme-threshold))
       (when (consp main)
@@ -222,13 +220,13 @@ If DARK, find the first dark `user-theme'."
             (load-automatic-theme mode)
             (if main
                 (load-theme
-                 (id
+                 (name
                   (case main
                     (:light light-theme)
                     (:dark dark-theme)
-                    (t (find main themes :key #'id))))
+                    (t (find main themes :key #'name))))
                  mode)
-                (load-theme (id (car themes)) mode)))))))
+                (load-theme (name (car themes)) mode)))))))
 
 (defmethod nyxt:disable ((mode tailor-mode) &key)
   (hooks:remove-hook (nyxt:buffer-before-make-hook *browser*) 'style-web-buffer)
@@ -242,11 +240,11 @@ If DARK, find the first dark `user-theme'."
   (when *dark-theme-timer*
     (sb-ext:unschedule-timer *dark-theme-timer*)))
 
-(define-command-global load-theme (&optional id (mode (current-tailor-mode)))
-  "Load a custom `user-theme' with ID from MODE, apply it, and return it."
+(define-command-global load-theme (&optional name (mode (current-tailor-mode)))
+  "Load a custom `user-theme' with NAME from MODE, apply it, and return it."
   (flet ((find-style (sym)
            (find sym *styles* :key #'sym)))
-    (let ((theme (or (and id (find id (themes mode) :key #'id))
+    (let ((theme (or (and name (find name (themes mode) :key #'name))
                      (nyxt:prompt1
                       :prompt "Load theme"
                       :sources (make-instance 'theme-source))))
@@ -268,7 +266,7 @@ If DARK, find the first dark `user-theme'."
       (load-style (find-style 'nyxt:prompt-buffer) prompt-buffer)
       (loop for mode-style in modes-with-style
             do (load-style (find-style (class-name (class-of mode-style))) mode-style))
-      (nyxt::echo (format nil "Loaded theme ~a" (id theme)))
+      (nyxt::echo (format nil "Loaded theme ~a" (name theme)))
       theme)))
 
 (defmethod load-automatic-theme ((mode tailor-mode))
@@ -287,15 +285,15 @@ If DARK, find the first dark `user-theme'."
       (:gtk
        (if (or (str:containsp ":light" (uiop:getenv "GTK_THEME"))
                (null (uiop:getenv "GTK_THEME")))
-           (load-theme (id light-theme) mode)
-           (load-theme (id dark-theme) mode)))
+           (load-theme (name light-theme) mode)
+           (load-theme (name dark-theme) mode)))
       (t
        (flet ((set-timer (timer theme threshold)
                   (unless timer
                     (sb-ext:schedule-timer
                      (setf timer (sb-ext:make-timer
                                   (lambda ()
-                                    (load-theme (id theme) mode))
+                                    (load-theme (name theme) mode))
                                   :thread t))
                      (local-time:timestamp-to-universal threshold)
                      :absolute-p t
@@ -308,8 +306,8 @@ If DARK, find the first dark `user-theme'."
          (cond
            ((and (local-time:timestamp> (local-time:now) dark-theme-threshold)
                  (not (local-time:timestamp< (local-time:now) light-theme-threshold)))
-            (load-theme (id dark-theme) mode))
+            (load-theme (name dark-theme) mode))
            ((local-time:timestamp< (local-time:now) light-theme-threshold)
-            (load-theme (id dark-theme) mode))
+            (load-theme (name dark-theme) mode))
            ((local-time:timestamp> (local-time:now) light-theme-threshold)
-            (load-theme (id light-theme) mode))))))))
+            (load-theme (name light-theme) mode))))))))
