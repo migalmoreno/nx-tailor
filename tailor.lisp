@@ -26,6 +26,7 @@ by including `with-style' invocations in their configuration.")
 (define-class theme-source (prompter:source)
   ((prompter:name "User themes")
    (prompter:constructor (themes (current-tailor-mode)))
+   (prompter:filter-preprocessor #'prompter:filter-exact-matches)
    (prompter:active-attributes-keys '("Name"))))
 
 (define-class style ()
@@ -39,16 +40,14 @@ by including `with-style' invocations in their configuration.")
      :documentation "A function that takes a theme and returns a
 new style based on its value."))
   (:export-class-name-p t)
-  (:export-accessor-names-p t)
-  (:accessor-name-transformer (class*:make-name-transformer name)))
+  (:export-accessor-names-p t))
 
 (define-class user-theme (theme:theme)
   ((name
     nil
     :type (or null symbol)))
   (:export-class-name-p t)
-  (:export-accessor-names-p t)
-  (:accessor-name-transformer (class*:make-name-transformer name)))
+  (:export-accessor-names-p t))
 
 (defun current-tailor-mode ()
   "Return `tailor-mode' if it's active in the current buffer."
@@ -205,6 +204,33 @@ If DARK, find the first dark `user-theme'."
       (find-if #'theme:dark-p (themes mode))
       (find-if-not #'theme:dark-p (themes mode))))
 
+(define-command-global load-theme (&optional name (mode (current-tailor-mode)))
+  "Load a custom `user-theme' with NAME from MODE, apply it, and return it."
+  (flet ((find-style (sym)
+           (find sym *styles* :key #'sym)))
+    (let ((theme (or (and name (find name (themes mode) :key #'name))
+                     (nyxt:prompt1
+                      :prompt "Load theme"
+                      :sources (make-instance 'theme-source))))
+          (prompt-buffer (make-instance 'nyxt:prompt-buffer
+                                        :window (current-window)))
+          (modes-with-style
+            (remove-if-not (lambda (mode)
+                             (some (lambda (slot)
+                                     (eq 'nyxt:style slot))
+                                   (mopu:slot-names (class-of mode))))
+                           (nyxt:modes (buffer mode)))))
+      (setf *current-theme* theme)
+      (setf (theme *browser*) theme)
+      (load-style (find-style 'nyxt:window) (current-window))
+      (load-style (find-style 'nyxt:web-buffer) (buffer mode))
+      (load-style (find-style 'nyxt:status-buffer) (nyxt:status-buffer (current-window)))
+      (load-style (find-style 'nyxt:prompt-buffer) prompt-buffer)
+      (loop for mode-style in modes-with-style
+            do (load-style (find-style (class-name (class-of mode-style))) mode-style))
+      (nyxt::echo (format nil "Loaded theme ~a" (name theme)))
+      theme)))
+
 (defmethod nyxt:enable ((mode tailor-mode) &key)
   (with-slots (main themes auto-p) mode
     (let ((light-theme (or (when (consp main)
@@ -239,35 +265,6 @@ If DARK, find the first dark `user-theme'."
     (sb-ext:unschedule-timer *light-theme-timer*))
   (when *dark-theme-timer*
     (sb-ext:unschedule-timer *dark-theme-timer*)))
-
-(define-command-global load-theme (&optional name (mode (current-tailor-mode)))
-  "Load a custom `user-theme' with NAME from MODE, apply it, and return it."
-  (flet ((find-style (sym)
-           (find sym *styles* :key #'sym)))
-    (let ((theme (or (and name (find name (themes mode) :key #'name))
-                     (nyxt:prompt1
-                      :prompt "Load theme"
-                      :sources (make-instance 'theme-source))))
-          (prompt-buffer (make-instance
-                          'nyxt:prompt-buffer
-                          :window (current-window)
-                          :sources (make-instance 'prompter:raw-source)))
-          (modes-with-style
-            (remove-if-not (lambda (mode)
-                             (some (lambda (slot)
-                                     (eq 'nyxt:style slot))
-                                   (mopu:slot-names (class-of mode))))
-                           (nyxt:modes (buffer mode)))))
-      (setf *current-theme* theme)
-      (setf (theme *browser*) theme)
-      (load-style (find-style 'nyxt:window) (current-window))
-      (load-style (find-style 'nyxt:web-buffer) (buffer mode))
-      (load-style (find-style 'nyxt:status-buffer) (nyxt:status-buffer (current-window)))
-      (load-style (find-style 'nyxt:prompt-buffer) prompt-buffer)
-      (loop for mode-style in modes-with-style
-            do (load-style (find-style (class-name (class-of mode-style))) mode-style))
-      (nyxt::echo (format nil "Loaded theme ~a" (name theme)))
-      theme)))
 
 (defmethod load-automatic-theme ((mode tailor-mode))
   "Automatically set the theme based on the specified criteria in MODE."
