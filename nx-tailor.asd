@@ -1,9 +1,9 @@
 (defsystem #:nx-tailor
-  :description "An interface to manage themes in Nyxt."
-  :author "conses"
-  :homepage "https://git.sr.ht/~conses/nx-tailor"
+  :description "nx-tailor is a theme manager for Nyxt."
+  :author "Miguel Ángel Moreno"
+  :homepage "https://github.com/migalmoreno/nx-tailor"
   :license "BSD 3-Clause"
-  :version "0.0.1"
+  :version "0.1.0"
   :serial t
   :depends-on (#:nyxt)
   :components ((:file "package")
