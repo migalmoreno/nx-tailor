@@ -9,7 +9,7 @@
 
 To install the extension, you should download the source and place it in Nyxt's extensions path, given by the value of `nyxt-source-registry` (by default `~/.local/share/nyxt/extensions`).  
 
-    git clone https://git.mianmoreno.com/nx-tailor ~/.local/share/nyxt/extensions/nx-tailor
+    git clone https://github.com/migalmoreno/nx-tailor ~/.local/share/nyxt/extensions/nx-tailor
 
 The extension works with **Nyxt 3 onward** but it's encouraged to use it with the latest version of Nyxt master for the time being. It also requires you to use the [SBCL](https://www.sbcl.org/manual/) Common Lisp implementation to make use of the scheduling capabilities for automatic theme switching.  
 
@@ -102,5 +102,5 @@ By doing this, we'll allow `nx-tailor` to handle the styling of the interface el
 
 ## Contributing
 
-You can send feedback, patches, or bug reports to [public@mianmoreno.com](mailto:public@mianmoreno.com).  
+Feel free to open an issue with bug reports or feature requests. PRs are more than welcome too.  
 
