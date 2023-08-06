@@ -3,7 +3,7 @@
   :author "Miguel Ángel Moreno"
   :homepage "https://github.com/migalmoreno/nx-tailor"
   :license "BSD 3-Clause"
-  :version "0.1.0"
+  :version "0.2.0"
   :serial t
   :depends-on (#:nyxt)
   :components ((:file "package")
