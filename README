@@ -1,4 +1,4 @@
-# -*- mode: org; org-html-head-include-default-style: nil; org-html-postamble: nil; after-save-hook: org-md-export-to-markdown; -*-
+# -*- mode: org; org-html-head-include-default-style: nil; org-html-postamble: nil; -*-
 #+OPTIONS: toc:nil num:nil
 * nx-tailor
 =nx-tailor= is a thin wrapper over the [[https://nyxt.atlas.engineer/][Nyxt]] built-in theme library (=nyxt/theme=). Its main purpose is to allow handling multiple themes inside a single browser session and to streamline theme selection on startup based on user configuration.
@@ -7,7 +7,7 @@
 To install the extension, you should download the source and place it in Nyxt's extensions path, given by the value of =nyxt-source-registry= (by default =~/.local/share/nyxt/extensions=).
 
 #+begin_src sh
-git clone https://github.com/migalmoreno/nx-tailor ~/.local/share/nyxt/extensions/nx-tailor
+git clone https://git.migalmoreno.com/nx-tailor ~/.local/share/nyxt/extensions/nx-tailor
 #+end_src
 
 The extension works with *Nyxt 3 onward* but it's encouraged to use it with the latest version of Nyxt master for the time being. It also requires you to use the [[https://www.sbcl.org/manual/][SBCL]] Common Lisp implementation to make use of the scheduling capabilities for automatic theme switching.
@@ -108,6 +108,3 @@ Now, if you want to tweak Nyxt's appearance further than its color palette by ch
 #+end_src
 
 By doing this, we'll allow =nx-tailor= to handle the styling of the interface element (=nyxt:status-buffer= in the above case).
-
-** Contributing
-Feel free to open an issue with bug reports or feature requests. PRs are more than welcome too.
