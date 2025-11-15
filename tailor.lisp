@@ -171,11 +171,15 @@ theme variants will be selected from the pair in the form
 (LIGHT-THEME . DARK-THEME) where each cell is the name of the theme.")
    (auto-p
     nil
-    :type (or boolean :time :gtk)
-    :documentation "Whether to automatically apply a `theme'. If `:time' or `t',
-it will apply the corresponding theme automatically based on the time of the day.
-If `:gtk' it will be applied based on the value of the `GTK_THEME' environment
-variable.")
+    :type boolean
+    :documentation "Whether to automatically apply a `theme' based on
+`auto-criteria'.")
+   (auto-criteria
+    :time
+    :type (or :time :env)
+    :documentation "If `:time' it will apply the corresponding theme
+automatically based on the time of the day. If `:env' it will be applied based
+on the value of the `NX_TAILOR_THEME' environment variable.")
    (light-theme-threshold
     (* 6 60 60)
     :type number
@@ -201,18 +205,23 @@ should be activated.")
       (when (consp main)
         (setf main (cons (find-theme (car main)) (find-theme (cdr main))))))))
 
-(defun find-theme (mode &key dark)
-  "Find the first light `user-theme' in MODE.
-If DARK, find the first dark `user-theme'."
-  (if dark
-      (find-if #'theme:dark-p (themes mode))
+(defun find-light-theme (mode)
+  "Find the first light `user-theme' in MODE."
+  (if (consp (main mode))
+      (car (main mode))
       (find-if-not #'theme:dark-p (themes mode))))
+
+(defun find-dark-theme (mode)
+  "Find the first dark `user-theme' in MODE."
+  (if (consp (main mode))
+      (cdr (main mode))
+      (find-if #'theme:dark-p (themes mode))))
 
 (define-command-global load-theme (&optional name (mode (current-tailor-mode)))
   "Load a custom `user-theme' with NAME from MODE, apply it, and return it."
   (flet ((find-style (sym)
            (find sym *styles* :key #'sym)))
-    (let ((theme (or (and name (find name (themes mode) :key #'name))
+    (let ((theme (or (and name (find name (themes mode) :key #'tailor:name :test #'string=))
                      (nyxt:prompt1
                       :prompt "Load theme"
                       :sources (make-instance 'theme-source))))
@@ -235,28 +244,61 @@ If DARK, find the first dark `user-theme'."
       (nyxt::echo (format nil "Loaded theme ~a" (name theme)))
       theme)))
 
+(defmethod load-scheduled-theme ((mode tailor-mode))
+  "Automatically load the themes in MODE based on time."
+  (flet ((set-timer (timer theme threshold)
+           (unless timer
+             (sb-ext:schedule-timer
+              (setf timer (sb-ext:make-timer
+                           (lambda ()
+                             (load-theme (name theme) mode))
+                           :thread t))
+              (local-time:timestamp-to-universal threshold)
+              :absolute-p t
+              :repeat-interval 86400))))
+    (let* ((light-theme (find-light-theme mode))
+           (dark-theme (find-dark-theme mode))
+           (light-theme-threshold (local-time:timestamp+
+                                   (today) (light-theme-threshold mode) :sec))
+           (dark-theme-threshold (local-time:timestamp+
+                                  (today) (dark-theme-threshold mode) :sec)))
+      (nyxt:run-thread "tailor light-theme timer"
+        (set-timer *light-theme-timer* light-theme light-theme-threshold))
+      (nyxt:run-thread "tailor dark-theme timer"
+        (sleep 0.1)
+        (set-timer *dark-theme-timer* dark-theme dark-theme-threshold))
+      (load-theme
+       (name
+        (cond
+          ((and (local-time:timestamp> (local-time:now) dark-theme-threshold)
+                (not (local-time:timestamp< (local-time:now) light-theme-threshold)))
+           dark-theme)
+          ((local-time:timestamp< (local-time:now) light-theme-threshold)
+           dark-theme)
+          ((local-time:timestamp> (local-time:now) light-theme-threshold)
+           light-theme)))
+       mode))))
+
 (defmethod nyxt:enable ((mode tailor-mode) &key)
   (with-slots (main themes auto-p) mode
-    (let ((light-theme (or (when (consp main)
-                             (car main))
-                           (find-theme mode)))
-          (dark-theme (or (when (consp main)
-                            (cdr main))
-                          (find-theme mode :dark t))))
+    (let ((light-theme (find-light-theme mode))
+          (dark-theme (find-dark-theme mode)))
       (unless (or (not themes)
                   (find (theme *browser*) themes :test #'equal)
                   *current-theme*)
         (if auto-p
-            (load-automatic-theme mode)
-            (if main
-                (load-theme
-                 (name
+            (case (auto-criteria mode)
+              (:env (load-theme (uiop:getenv "NX_TAILOR_THEME") mode))
+              (:time (load-scheduled-theme mode)))
+            (load-theme
+             (name
+              (if main
                   (case main
                     (:light light-theme)
                     (:dark dark-theme)
-                    (t (find main themes :key #'name))))
-                 mode)
-                (load-theme (name (car themes)) mode)))))))
+                    (otherwise (find main themes :key #'name)))
+                  (car themes)))
+             mode))))))
 
 (defmethod nyxt:disable ((mode tailor-mode) &key)
   (hooks:remove-hook (nyxt:buffer-before-make-hook *browser*) 'style-web-buffer)
@@ -269,46 +311,3 @@ If DARK, find the first dark `user-theme'."
     (sb-ext:unschedule-timer *light-theme-timer*))
   (when *dark-theme-timer*
     (sb-ext:unschedule-timer *dark-theme-timer*)))
-
-(defmethod load-automatic-theme ((mode tailor-mode))
-  "Automatically set the theme based on the specified criteria in MODE."
-  (let* ((light-theme (or (when (consp (main mode))
-                            (car (main mode)))
-                          (find-theme mode)))
-         (dark-theme (or (when (consp (main mode))
-                           (cdr (main mode)))
-                         (find-theme mode :dark t)))
-         (light-theme-threshold (local-time:timestamp+
-                                 (today) (light-theme-threshold mode) :sec))
-         (dark-theme-threshold (local-time:timestamp+
-                                (today) (dark-theme-threshold mode) :sec)))
-    (case (auto-p mode)
-      (:gtk
-       (if (or (str:containsp ":light" (uiop:getenv "GTK_THEME"))
-               (null (uiop:getenv "GTK_THEME")))
-           (load-theme (name light-theme) mode)
-           (load-theme (name dark-theme) mode)))
-      (t
-       (flet ((set-timer (timer theme threshold)
-                  (unless timer
-                    (sb-ext:schedule-timer
-                     (setf timer (sb-ext:make-timer
-                                  (lambda ()
-                                    (load-theme (name theme) mode))
-                                  :thread t))
-                     (local-time:timestamp-to-universal threshold)
-                     :absolute-p t
-                     :repeat-interval 86400))))
-         (nyxt:run-thread "tailor light-theme timer"
-           (set-timer *light-theme-timer* light-theme light-theme-threshold))
-         (nyxt:run-thread "tailor dark-theme timer"
-           (sleep 0.1)
-           (set-timer *dark-theme-timer* dark-theme dark-theme-threshold))
-         (cond
-           ((and (local-time:timestamp> (local-time:now) dark-theme-threshold)
-                 (not (local-time:timestamp< (local-time:now) light-theme-threshold)))
-            (load-theme (name dark-theme) mode))
-           ((local-time:timestamp< (local-time:now) light-theme-threshold)
-            (load-theme (name dark-theme) mode))
-           ((local-time:timestamp> (local-time:now) light-theme-threshold)
-            (load-theme (name light-theme) mode))))))))
