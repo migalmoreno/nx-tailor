@@ -23,12 +23,6 @@ by including `with-style' invocations in their configuration.")
     (set :sec 0)
     (set :nsec 0)))
 
-(define-class theme-source (prompter:source)
-  ((prompter:name "User themes")
-   (prompter:constructor (themes (current-tailor-mode)))
-   (prompter:filter-preprocessor #'prompter:filter-exact-matches)
-   (prompter:active-attributes-keys '("Name"))))
-
 (define-class style ()
   ((sym
     nil
@@ -48,6 +42,16 @@ new style based on its value."))
     :type (or null symbol)))
   (:export-class-name-p t)
   (:export-accessor-names-p t))
+
+(define-class theme-source (prompter:source)
+  ((prompter:name "User themes")
+   (prompter:constructor (themes (current-tailor-mode)))
+   (prompter:filter-preprocessor #'prompter:filter-exact-matches)
+   (prompter:active-attributes-keys '("Name") :accessor nil)))
+
+(defmethod prompter:object-attributes ((theme user-theme) (source prompter:source))
+  (declare (ignore source))
+  `(("Name" ,(name theme))))
 
 (defun current-tailor-mode ()
   "Return `tailor-mode' if it's active in the current buffer."
