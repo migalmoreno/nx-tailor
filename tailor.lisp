@@ -39,7 +39,7 @@ new style based on its value."))
 (define-class user-theme (theme:theme)
   ((name
     nil
-    :type (or null symbol)))
+    :type (or null string)))
   (:export-class-name-p t)
   (:export-accessor-names-p t))
 
@@ -162,7 +162,7 @@ Optionally, retrieve the original style of OBJ via STYLE-SLOT."
  main interface theme.")
    (main
     nil
-    :type (or symbol :dark :light cons null)
+    :type (or string :dark :light cons null)
     :documentation "If a single theme name is specified, it will be chosen
 at startup if `auto-p' is `nil'. If either `:dark' or `:light' is passed,
 the corresponding `user-theme' will be selected at startup.
@@ -199,7 +199,7 @@ should be activated.")
                themes)
       mode
     (flet ((find-theme (name)
-             (find name themes :key #'name)))
+             (find name themes :key #'name :test #'string=)))
       (setf light-theme-threshold (round light-theme-threshold))
       (setf dark-theme-threshold (round dark-theme-threshold))
       (when (consp main)
@@ -221,7 +221,7 @@ should be activated.")
   "Load a custom `user-theme' with NAME from MODE, apply it, and return it."
   (flet ((find-style (sym)
            (find sym *styles* :key #'sym)))
-    (let ((theme (or (and name (find name (themes mode) :key #'tailor:name :test #'string=))
+    (let ((theme (or (and name (find name (themes mode) :key #'name :test #'string=))
                      (nyxt:prompt1
                       :prompt "Load theme"
                       :sources (make-instance 'theme-source))))
@@ -296,7 +296,7 @@ should be activated.")
                   (case main
                     (:light light-theme)
                     (:dark dark-theme)
-                    (otherwise (find main themes :key #'name)))
+                    (otherwise (find main themes :key #'name :test #'string=)))
                   (car themes)))
              mode))))))
 

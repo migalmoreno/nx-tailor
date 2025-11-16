@@ -57,11 +57,11 @@ To set up =nx-tailor=, you can write a configuration like this:
    (tailor:auto-criteria :time)
    (tailor:light-theme-threshold (* 8 60 60))
    (tailor:dark-theme-threshold (* 21.5 60 60))
-   (tailor:main '(modus-operandi . modus-vivendi))
+   (tailor:main '("modus-operandi" . "modus-vivendi"))
    (tailor:themes
     (list
      (make-instance 'tailor:user-theme
-                    :name 'modus-operandi
+                    :name "modus-operandi"
                     :background-color "white"
                     :on-background-color "black"
                     :primary-color "#093060"
@@ -71,7 +71,7 @@ To set up =nx-tailor=, you can write a configuration like this:
                     :on-accent-color "#005a5f"
                     :font-family "Iosevka")
      (make-instance 'tailor:user-theme
-                    :name 'modus-vivendi
+                    :name "modus-vivendi"
                     :dark-p t
                     :background-color "black"
                     :on-background-color "white"
@@ -89,8 +89,8 @@ Where =tailor:tailor-mode= slots include:
 - =auto-criteria= (default: =:time=) :: the criteria for automatic theme switching. If =:time= it will set the themes based on the time of the day, if =:env= it will apply them based on the =NX_TAILOR_THEME= environment variable.
 - =light-theme-threshold= (default: =(* 6 60 60)=) :: if =auto-p= is =t= and =auto-criteria= is =:time=, this indicates the number of seconds after midnight when the light theme should be applied.
 - =dark-theme-threshold= (default: =(* 21 60 60)=) :: if =auto-p= is =t= and =auto-criteria= is =:time=, this indicates the number of seconds after midnight when the dark theme should be applied.
-- =main= :: if =auto-p= is =nil=, this takes a symbol with the theme name to be selected at browser startup. Otherwise, it can take a cons pair of the form =(LIGHT-THEME . DARK-THEME)= for the corresponding light/dark theme names to be picked from the =themes= list when applying =auto-p= logic. If no =main= is supplied, the first non-=:dark-p= theme from =themes= will be chosen as the light theme and the first =:dark-p= theme from =themes= as the dark theme.
-- =themes= :: a list of =user-theme= themes, each consisting of a mandatory symbol name and the set of theme attributes as per the =theme:theme= constructor.
+- =main= :: if =auto-p= is =nil=,  a string with the theme name to be selected at browser startup. Otherwise, it can take a cons pair of the form =(LIGHT-THEME . DARK-THEME)= for the corresponding light/dark theme names to be picked from the =themes= list when applying =auto-p= logic. If no =main= is supplied, the first non-=:dark-p= theme from =themes= will be chosen as the light theme and the first =:dark-p= theme from =themes= as the dark theme.
+- =themes= :: a list of =user-theme= themes, each consisting of a mandatory name and the set of theme attributes as per the =theme:theme= constructor.
 
 That's all you need for the extension to work. To see it take effect, simply invoke the =load-theme= command and you'll see the theme change on the fly.
 
